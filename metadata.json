@@ -1,0 +1,7 @@
+{
+  "name": "Horizon-Energie.be - Simulateur photovoltaïque",
+  "description": "Simulateur photovoltaïque hybride pour la Wallonie et Bruxelles - Horizon-Energie.be",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
