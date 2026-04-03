@@ -1,0 +1,58 @@
+{
+  "hardware": {
+    "PANEL_POWER_W": 450,
+    "PANEL_AREA_M2": 2.0,
+    "BATTERY_UNIT_COST": 600,
+    "MAINTENANCE_COST": 100
+  },
+  "energy_prices": {
+    "PRICE_BUY_KWH": 0.35,
+    "PRICE_SELL_KWH": 0.03,
+    "ENERGY_INFLATION": 0.03
+  },
+  "production": {
+    "BASE_PRODUCTION_FACTOR": 1000,
+    "DIRECTION_FACTORS": {
+      "S": 1050,
+      "SE": 1000,
+      "SW": 1000,
+      "E": 900,
+      "W": 900,
+      "NE": 800,
+      "NW": 800,
+      "N": 700
+    }
+  },
+  "panel_pricing_tiers": [
+    { "kwp": 0, "price": 950 },
+    { "kwp": 4, "price": 850 },
+    { "kwp": 6, "price": 825 },
+    { "kwp": 10, "price": 800 },
+    { "kwp": 15, "price": 750 },
+    { "kwp": 30, "price": 700 }
+  ],
+  "battery_pricing_tiers": [
+    { "capacity": 12, "price": 5400 },
+    { "capacity": 18, "price": 7650 },
+    { "capacity": 30, "price": 12000 }
+  ],
+  "system_selection_tiers": [
+    { "maxConsumption": 6500, "batteryKwh": 12, "inverterKva": 6, "maxPanels": 20 },
+    { "maxConsumption": 11000, "batteryKwh": 18, "inverterKva": 8, "maxPanels": 26 },
+    { "maxConsumption": 99999, "batteryKwh": 30, "inverterKva": 12, "maxPanels": 36 }
+  ],
+  "simulation_params": {
+    "BASE_SELF_CONSUMPTION": 0.30,
+    "THEORETICAL_BATTERY_BOOST": 0.40,
+    "MAX_AUTONOMY_RATE": 0.75,
+    "MAX_SELF_CONSUMPTION_CAP": 0.95,
+    "EV_EFFICIENCY_KWH_PER_KM": 0.20
+  },
+
+  "contact": {
+    "EMAIL": "jerome@horizon-energie.be",
+    "PHONE": "04xx / xx xx xx"
+  }
+}
+
+

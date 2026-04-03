@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { SimulationResult } from '../types';
 import { SimulationCharts } from './SimulationCharts';
 import ReactMarkdown from 'react-markdown';
+import { generateResultsPdf, downloadPdf } from '../services/pdfService';
+import { CONTACT } from '../constants';
 
 interface ResultsDashboardProps {
   result: SimulationResult;
@@ -16,8 +18,10 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, aiAn
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    phone: ''
+    phone: '',
+    email: ''
   });
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   // Calculate the split of autonomy between PV and Battery
   const totalRate = result.selfConsumptionRate || 1;
@@ -30,6 +34,15 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, aiAn
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    const pdf = await generateResultsPdf('results-dashboard', `Horizon_Energie_${formData.lastName || 'Simulation'}.pdf`);
+    if (pdf) {
+      downloadPdf(pdf, `Horizon_Energie_${formData.lastName || 'Simulation'}.pdf`);
+    }
+    setIsGeneratingPdf(false);
+  };
+
   const handleSendQuoteRequest = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,9 +51,10 @@ export const ResultsDashboard: React.FC<ResultsDashboardProps> = ({ result, aiAn
     const emailBody = `
 COORDONNÉES CLIENT :
 --------------------
-Nom : ${formData.lastName}
+nom : ${formData.lastName}
 Prénom : ${formData.firstName}
 Téléphone : ${formData.phone}
+Email : ${formData.email}
 
 DÉTAILS DE LA SIMULATION :
 --------------------------
@@ -62,7 +76,7 @@ ${aiAnalysis || 'Non générée'}
 Lien vers la simulation : (Simulation générée le ${new Date().toLocaleDateString('fr-BE')})
     `.trim();
 
-    const mailtoLink = `mailto:jerome@horizon-energie.be?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    const mailtoLink = `mailto:${CONTACT.EMAIL}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     
     // Trigger the email client
     window.location.href = mailtoLink;
@@ -71,7 +85,7 @@ Lien vers la simulation : (Simulation générée le ${new Date().toLocaleDateStr
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div id="results-dashboard" className="space-y-8 animate-fade-in pb-10">
       {/* Header Summary - HERO SECTION */}
       <div className="bg-horizon-900 rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden">
         {/* Background Effects */}
@@ -291,6 +305,10 @@ Lien vers la simulation : (Simulation générée le ${new Date().toLocaleDateStr
                            <label className="block text-[10px] font-bold text-horizon-500 uppercase mb-1">Téléphone</label>
                            <input required name="phone" value={formData.phone} onChange={handleInputChange} type="tel" className="w-full px-3 py-2 text-sm border border-horizon-200 rounded-lg focus:ring-1 focus:ring-solar-500 outline-none" placeholder="04xx / xx xx xx" />
                         </div>
+                        <div>
+                           <label className="block text-[10px] font-bold text-horizon-500 uppercase mb-1">Email</label>
+                           <input required name="email" value={formData.email} onChange={handleInputChange} type="email" className="w-full px-3 py-2 text-sm border border-horizon-200 rounded-lg focus:ring-1 focus:ring-solar-500 outline-none" placeholder="client@exemple.com" />
+                        </div>
                         <button type="submit" className="w-full py-3 bg-solar-500 text-white font-bold rounded-lg text-sm shadow-lg shadow-solar-100 hover:bg-solar-600 transition-colors">
                           Envoyer ma demande
                         </button>
@@ -301,14 +319,36 @@ Lien vers la simulation : (Simulation générée le ${new Date().toLocaleDateStr
                 <>
                   <button 
                     onClick={() => setShowLeadForm(true)}
-                    className="w-full py-4 px-4 bg-solar-500 hover:bg-solar-600 text-white rounded-xl text-lg font-bold shadow-xl shadow-solar-100 transition-all transform hover:scale-[1.02] flex items-center justify-center group"
+                    className="w-full py-4 px-4 bg-solar-500 hover:bg-solar-600 text-white rounded-xl text-lg font-bold shadow-xl shadow-solar-100 transition-all transform hover:scale-[1.02] flex items-center justify-center group no-pdf"
                   >
                     Demandez un devis sur mesure
                     <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                   </button>
+                  
+                  <button 
+                    onClick={handleDownloadPdf}
+                    disabled={isGeneratingPdf}
+                    className="w-full py-3 px-4 bg-white border-2 border-solar-500 text-solar-600 hover:bg-solar-50 rounded-xl text-sm font-bold transition-all flex items-center justify-center group no-pdf disabled:opacity-50"
+                  >
+                    {isGeneratingPdf ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-solar-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Génération du PDF...
+                      </span>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        Télécharger mon rapport PDF
+                      </>
+                    )}
+                  </button>
+
                   <button 
                     onClick={onReset}
-                    className="w-full py-2 text-horizon-400 hover:text-horizon-600 text-xs font-bold uppercase tracking-widest transition-colors"
+                    className="w-full py-2 text-horizon-400 hover:text-horizon-600 text-xs font-bold uppercase tracking-widest transition-colors no-pdf"
                   >
                     Faire un nouvel essai
                   </button>

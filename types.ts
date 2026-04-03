@@ -12,7 +12,7 @@ export interface UserInput {
   
   // Roof Specifics
   roofArea: number; // m² available
-  roofSegments: CardinalDirection[]; // List of selected orientations (1 to 3)
+  roofSegments: CardinalDirection[]; // List of selected orientations (1 to 4)
 
   // Step 2: Detailed Profile
   userProfile: UserProfile;

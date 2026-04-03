@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserInput, CardinalDirection, UserProfile } from '../types';
+import { EV_EFFICIENCY } from '../constants';
 
 interface InputFormProps {
   onSimulate: (data: UserInput) => void;
@@ -243,24 +244,24 @@ export const InputForm: React.FC<InputFormProps> = ({ onSimulate, isSimulating }
                    Combien de versants disponibles pour l'installation photovoltaïque ?
                  </label>
                  <div className="flex space-x-4">
-                    {[1, 2, 3].map((num) => (
+                    {[1, 2, 3, 4].map((num) => (
                       <button
                         key={num}
                         type="button"
                         onClick={() => handleNumSegmentsChange(num)}
-                        className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold border transition-all duration-200 ${
+                        className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold border transition-all duration-200 ${
                           numRoofSegments === num
                             ? 'bg-horizon-800 text-white border-horizon-800 shadow-md transform scale-[1.02]'
                             : 'bg-white text-horizon-600 border-horizon-200 hover:border-horizon-400 hover:bg-gray-50'
                         }`}
                       >
-                        {num} {num > 1 ? 'Versants' : 'Versant'}
+                        {num} {num > 1 ? 'V.' : 'V.'}
                       </button>
                     ))}
                  </div>
                </div>
                
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in pt-2 border-t border-horizon-100">
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in pt-2 border-t border-horizon-100">
                  {formData.roofSegments.map((segment, index) => (
                     <div key={index} className="space-y-2">
                        <label className="block text-xs font-bold text-horizon-500 uppercase tracking-wide">
@@ -411,7 +412,7 @@ export const InputForm: React.FC<InputFormProps> = ({ onSimulate, isSimulating }
                         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-horizon-400 text-xs font-bold">km/an</span>
                        </div>
                        <p className="text-[10px] text-solar-600 mt-1 font-medium">
-                         ~{Math.round(formData.electricVehicleKm * 0.2).toLocaleString()} kWh/an estimés (sur base de 20kWh/100km)
+                         ~{Math.round(formData.electricVehicleKm * EV_EFFICIENCY).toLocaleString()} kWh/an estimés (sur base de {Math.round(EV_EFFICIENCY * 100)}kWh/100km)
                        </p>
                     </div>
                   )}

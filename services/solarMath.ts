@@ -7,7 +7,11 @@ import {
   PRICE_BUY_KWH,
   PRICE_SELL_KWH,
   getPanelPricePerKwp,
-  BASE_PRODUCTION_FACTOR
+  BASE_PRODUCTION_FACTOR,
+  ENERGY_INFLATION,
+  BATTERY_PRICING,
+  SYSTEM_SELECTION_TIERS,
+  SIM_PARAMS
 } from '../constants';
 
 export const calculateSimulation = (input: UserInput, solarData: SolarApiResponse | null = null): SimulationResult => {
@@ -23,23 +27,13 @@ export const calculateSimulation = (input: UserInput, solarData: SolarApiRespons
   let inverterKva = 0;
   let maxSupportedPanels = 0;
 
-  // New Tiers Logic using multiples of 6kWh or 10kWh
-  if (input.annualConsumption < 6500) {
-    // Tier 1: Basic
-    batteryCapacityKwh = 12; // 2 x 6kWh
-    inverterKva = 6;         
-    maxSupportedPanels = 20; 
-  } else if (input.annualConsumption >= 6500 && input.annualConsumption < 11000) {
-    // Tier 2: Comfort
-    batteryCapacityKwh = 18; // 3 x 6kWh
-    inverterKva = 8;         
-    maxSupportedPanels = 26; 
-  } else {
-    // Tier 3: High Capacity
-    batteryCapacityKwh = 30; // 3 x 10kWh
-    inverterKva = 12;        
-    maxSupportedPanels = 36; 
-  }
+  // Tiers logic from configuration
+  const tier = SYSTEM_SELECTION_TIERS.find(t => input.annualConsumption < t.maxConsumption) 
+               || SYSTEM_SELECTION_TIERS[SYSTEM_SELECTION_TIERS.length - 1];
+               
+  batteryCapacityKwh = tier.batteryKwh;
+  inverterKva = tier.inverterKva;
+  maxSupportedPanels = tier.maxPanels;
 
   // --- 2. PHYSICAL CONSTRAINTS (Roof Area & Hardware Limits) ---
   
@@ -93,7 +87,7 @@ export const calculateSimulation = (input: UserInput, solarData: SolarApiRespons
 
   // --- 4. SELF-CONSUMPTION & AUTONOMY ---
   
-  const baseSelfConsumption = 0.30;
+  const baseSelfConsumption = SIM_PARAMS.BASE_SELF_CONSUMPTION;
   
   let profileMultiplier = 1.0;
   if (input.userProfile === 'home_office') profileMultiplier = 1.4; 
@@ -113,20 +107,20 @@ export const calculateSimulation = (input: UserInput, solarData: SolarApiRespons
   const dailyConsumption = input.annualConsumption / 365;
   const batteryToConsRatio = batteryCapacityKwh / dailyConsumption; 
   
-  let theoreticalBatteryBoost = 0.40; // Higher boost as minimum battery is now 12kWh
+  let theoreticalBatteryBoost = SIM_PARAMS.THEORETICAL_BATTERY_BOOST; 
   if (batteryToConsRatio < 0.5) {
-      theoreticalBatteryBoost = 0.30; 
+      theoreticalBatteryBoost = SIM_PARAMS.THEORETICAL_BATTERY_BOOST * 0.75; 
   } else if (batteryToConsRatio > 1.0) {
-      theoreticalBatteryBoost = 0.50; 
+      theoreticalBatteryBoost = SIM_PARAMS.THEORETICAL_BATTERY_BOOST * 1.25; 
   }
 
   let rawSelfConsumptionRate = theoreticalNaturalRate + theoreticalBatteryBoost;
-  if (rawSelfConsumptionRate > 0.95) rawSelfConsumptionRate = 0.95; 
+  if (rawSelfConsumptionRate > SIM_PARAMS.MAX_SELF_CONSUMPTION_CAP) rawSelfConsumptionRate = SIM_PARAMS.MAX_SELF_CONSUMPTION_CAP; 
 
   let rawConsumedEnergy = estimatedAnnualProduction * rawSelfConsumptionRate;
   
-  // Autonomy cannot exceed 75% of CLIENT CONSUMPTION due to Belgian Winter
-  const maxAllowedConsumption = input.annualConsumption * 0.75;
+  // Autonomy limit from configuration
+  const maxAllowedConsumption = input.annualConsumption * SIM_PARAMS.MAX_AUTONOMY_RATE;
   
   let finalConsumedEnergy = rawConsumedEnergy;
   let wasCapped = false;
@@ -149,16 +143,14 @@ export const calculateSimulation = (input: UserInput, solarData: SolarApiRespons
   const pricePerKwp = getPanelPricePerKwp(systemSizeKwp);
   const capexPanels = systemSizeKwp * pricePerKwp;
   
-  // CAPEX Battery (Refined for 6kWh / 10kWh multiples)
+  // CAPEX Battery (Using tiers from config)
   let capexBattery = 0;
-  if (batteryCapacityKwh === 12) {
-      capexBattery = 5400; // ~450/kWh
-  } else if (batteryCapacityKwh === 18) {
-      capexBattery = 7650; // ~425/kWh
-  } else if (batteryCapacityKwh === 30) {
-      capexBattery = 12000; // ~400/kWh
+  const batteryTier = BATTERY_PRICING.find(b => b.capacity === batteryCapacityKwh);
+  if (batteryTier) {
+      capexBattery = batteryTier.price;
   } else {
-      capexBattery = batteryCapacityKwh * 450;
+      // Fallback to per-kWh pricing if no exact tier match
+      capexBattery = batteryCapacityKwh * 450; 
   }
 
   const totalInvestment = capexPanels + capexBattery;
@@ -177,7 +169,7 @@ export const calculateSimulation = (input: UserInput, solarData: SolarApiRespons
   
   const chartData: YearlyData[] = [];
   let cumulative = -totalInvestment;
-  const energyInflation = 0.03;
+  const energyInflation = ENERGY_INFLATION;
 
   for (let i = 1; i <= 20; i++) {
     const adjustedGain = (totalAnnualGain * Math.pow(1 + energyInflation, i-1)) - MAINTENANCE_COST;

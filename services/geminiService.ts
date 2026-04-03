@@ -2,13 +2,20 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { SimulationResult, UserInput } from '../types';
 
 const getAiClient = () => {
-  if (!process.env.API_KEY) throw new Error("API Key is missing");
+  if (!process.env.API_KEY) return null;
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 export const getCoordinatesFromAddress = async (address: string): Promise<{lat: number, lng: number} | null> => {
   try {
     const ai = getAiClient();
+    
+    // Demo Mode: Mock coordinates for Brussels if no API Key
+    if (!ai) {
+      console.warn("Demo Mode: Using mock coordinates for Brussels.");
+      return { lat: 50.8503, lng: 4.3517 };
+    }
+
     const prompt = `Give me the latitude and longitude for this address: "${address}". 
     If the address is vague, find the center of the city/street.`;
 
@@ -81,6 +88,10 @@ export const generateExpertAnalysis = async (input: UserInput, result: Simulatio
     3. Souligne la rentabilité grâce à l'autoconsommation élevée.
     4. Ton : Expert, rassurant, orienté solution. Court (max 100 mots).
     `;
+
+    if (!ai) {
+      return "Ceci est une analyse générée en mode démo. En conditions réelles, l'IA d'Horizon-Energie analyse précisément vos données pour optimiser votre rentabilité.";
+    }
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
